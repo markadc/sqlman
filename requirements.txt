@@ -2,4 +2,3 @@ DBUtils==2.0.1
 Faker==18.6.0
 loguru==0.5.3
 PyMySQL==1.0.2
-
