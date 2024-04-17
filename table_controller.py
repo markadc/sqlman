@@ -4,7 +4,7 @@ import time
 
 from loguru import logger
 
-from psqlctrl.handler import Handler
+from sqlman.handler import Handler
 
 
 class TableController(Handler):

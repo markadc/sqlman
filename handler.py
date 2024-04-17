@@ -19,7 +19,7 @@ class Handler:
         self.__pool = PooledDB(pymysql, **self.__cfg)
 
     def __getitem__(self, table: str):
-        from psqlctrl.table_controller import TableController
+        from sqlman.table_controller import TableController
         return TableController(self.__cfg, table)
 
     def table(self, name: str):

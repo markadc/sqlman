@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-from psqlctrl.handler import Handler
+from sqlman.handler import Handler

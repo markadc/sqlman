@@ -30,7 +30,7 @@
 ### 连接mysql
 
 ```python
-from psqlctrl import Handler
+from sqlman import Handler
 
 # 用来连接test数据库
 mysql_cfg = {
