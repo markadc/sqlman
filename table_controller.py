@@ -28,7 +28,7 @@ class TableController(Handler):
         """构造where语句"""
         where = ' and '.join(
             [
-                '{} in ({})'.format(k, TableController.safe_quotation(v)) if isinstance(v, list) else "{}='{}'".format(
+                '{} in ({})'.format(k, TableController.safe_quotation(v)) if isinstance(v, list) else "`{}`='{}'".format(
                     k, v
                 )
                 for k, v in data.items()
