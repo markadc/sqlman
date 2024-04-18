@@ -23,14 +23,11 @@ class TableController(Handler):
         """构造set语句"""
         return ', '.join(["{}='{}'".format(k, v) for k, v in data.items()])
 
-    @staticmethod
-    def make_condition(data: dict) -> str:
+    def make_condition(self, data: dict) -> str:
         """构造where语句"""
         where = ' and '.join(
             [
-                '{} in ({})'.format(k, TableController.safe_quotation(v)) if isinstance(v, list) else "`{}`='{}'".format(
-                    k, v
-                )
+                f'{k} in ({self.safe_quotation(v)})' if isinstance(v, list) else f"`{k}`='{v}'"
                 for k, v in data.items()
             ]
         )
