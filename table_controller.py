@@ -21,13 +21,14 @@ class TableController(Handler):
     @staticmethod
     def make_update(data: dict) -> str:
         """构造set语句"""
-        return ', '.join(["{}='{}'".format(k, v) for k, v in data.items()])
+        return ', '.join(["`{}`='{}'".format(k, v) for k, v in data.items()])
 
-    def make_condition(self, data: dict) -> str:
+    @staticmethod
+    def make_condition(data: dict) -> str:
         """构造where语句"""
         where = ' and '.join(
             [
-                f'{k} in ({self.safe_quotation(v)})' if isinstance(v, list) else f"`{k}`='{v}'"
+                f'`{k}` in ({TableController.safe_quotation(v)})' if isinstance(v, list) else f"`{k}`='{v}'"
                 for k, v in data.items()
             ]
         )
@@ -89,10 +90,9 @@ class TableController(Handler):
     @staticmethod
     def items_is_ok(items: list, must_exist: str) -> bool:
         """
-        校验items\n
-        item结构一致且含有<must_exist>字段
+        校验items，item结构一致且含有<must_exist>字段
         Args:
-            items: 数据
+            items: 一些数据
             must_exist: 必须存在的字段
         """
         fields = None
@@ -106,20 +106,20 @@ class TableController(Handler):
                     return False
         return True
 
-    def update_one(self, one: dict, depend: str) -> int:
+    def update_one(self, item: dict, depend: str) -> int:
         """
         更新数据
         Args:
-            one: 一条数据，且含有<depend>字段
+            item: 数据，且含有<depend>字段
             depend: 条件判断的字段
 
         Returns:
             受影响的行数
         """
-        dv = one.pop(depend)
+        dv = item.pop(depend)
         temp = []
         args = []
-        for k, v in one.items():
+        for k, v in item.items():
             temp.append('{}=%s'.format(k))
             args.append(v)
         s = ', '.join(temp)
@@ -127,24 +127,24 @@ class TableController(Handler):
         sql = 'update {} set {} where {}=%s'.format(self.table, s, depend)
         return self.exe_sql(sql, args=args)
 
-    def update_many(self, many: list, depend: str) -> int:
+    def update_many(self, items: list, depend: str) -> int:
         """
         批量更新数据
         Args:
-            many: 多条数据，每条数据含有<depend>字段
+            items: 多条数据，每条数据含有<depend>字段
             depend: 条件判断的字段
 
         Returns:
             受影响的行数
         """
-        assert self.items_is_ok(many, depend), '错误的items'
+        assert self.items_is_ok(items, depend), '错误的items'
 
-        ks = list(many[0].keys())
+        ks = list(items[0].keys())
         ks.remove(depend)
         mid = ', '.join(['{}=%s'.format(k) for k in ks])
         sql = 'update {} set {} where {}=%s'.format(self.table, mid, depend)
         args = []
-        for one in many:
+        for one in items:
             vs = [one[k] for k in ks]
             vs.append(one[depend])
             args.append(vs)
