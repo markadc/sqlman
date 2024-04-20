@@ -7,38 +7,44 @@ from loguru import logger
 from sqlman.handler import Handler
 
 
+def make_update(data: dict) -> str:
+    """set部分"""
+    return ', '.join(["`{}`='{}'".format(k, v) for k, v in data.items()])
+
+
+def add_quotation(some: list) -> str:
+    """['a', 'b', 'c']  ==>  'a','b','c'"""
+    res = ', '.join(["'{}'".format(v) for v in some])
+    return res
+
+
+def make_condition(data: dict) -> str:
+    """where部分"""
+    where = ' and '.join(
+        [
+            f'`{k}` in ({add_quotation(v)})' if isinstance(v, list) else f"`{k}`='{v}'"
+            for k, v in data.items()
+        ]
+    )
+    return where
+
+
+def show_datas(datas: list):
+    """仅配合scan"""
+    for data in datas:
+        print(data)
+
+
 class TableController(Handler):
     def __init__(self, cfg: dict, table: str):
         super().__init__(cfg)
         self.table = table
 
-    @staticmethod
-    def safe_quotation(some: list) -> str:
-        """[1, 2, 3]  ==>  '1','2','3'"""
-        res = ', '.join(["'{}'".format(v) for v in some])
-        return res
-
-    @staticmethod
-    def make_update(data: dict) -> str:
-        """构造set语句"""
-        return ', '.join(["`{}`='{}'".format(k, v) for k, v in data.items()])
-
-    @staticmethod
-    def make_condition(data: dict) -> str:
-        """构造where语句"""
-        where = ' and '.join(
-            [
-                f'`{k}` in ({TableController.safe_quotation(v)})' if isinstance(v, list) else f"`{k}`='{v}'"
-                for k, v in data.items()
-            ]
-        )
-        return where
-
     def delete(self, limit: int = None, **kwargs):
         """删除一条或多条数据"""
         sql = 'delete from {} where {} {}'.format(
             self.table,
-            self.make_condition(kwargs),
+            make_condition(kwargs),
             '' if limit is None else 'limit {}'.format(limit)
         )
         return self.exe_sql(sql)
@@ -47,8 +53,8 @@ class TableController(Handler):
         """更新数据"""
         sql = 'update {} set {} where {} {}'.format(
             self.table,
-            self.make_update(new),
-            self.make_condition(kwargs),
+            make_update(new),
+            make_condition(kwargs),
             '' if limit is None else 'limit {}'.format(limit)
         )
         return self.exe_sql(sql)
@@ -58,7 +64,7 @@ class TableController(Handler):
         sql = 'select {} from {} where {} {}'.format(
             pick,
             self.table,
-            self.make_condition(kwargs),
+            make_condition(kwargs),
             '' if limit is None else 'limit {}'.format(limit)
         )
         return self.exe_sql(sql, query_all=True)
@@ -67,14 +73,14 @@ class TableController(Handler):
         """查询数量"""
         sql = 'select count(1) from {} {}'.format(
             self.table,
-            'where {}'.format(self.make_condition(kwargs)) if kwargs else ''
+            'where {}'.format(make_condition(kwargs)) if kwargs else ''
         )
         count = self.exe_sql(sql, query_all=False, dict_cursor=False)[0]
         return count
 
     def is_exists(self, **kwargs) -> bool:
         """查询数据是否存在"""
-        sql = 'select 1 from {} where {} limit 1'.format(self.table, self.make_condition(kwargs))
+        sql = 'select 1 from {} where {} limit 1'.format(self.table, make_condition(kwargs))
         return self.exe_sql(sql) == 1
 
     def random(self, limit=1) -> dict | list:
@@ -177,12 +183,6 @@ class TableController(Handler):
         sql = '\n'.join([head, mid, tail])
         return self.exe_sql(sql, args=args)
 
-    @staticmethod
-    def _print(datas: list):
-        """仅配合scan"""
-        for data in datas:
-            print(data)
-
     def get_min(self, field: str):
         """获取字段的最小值"""
         sql = 'select min({}) from {}'.format(field, self.table)
@@ -205,7 +205,7 @@ class TableController(Handler):
         """
         扫描数据，每一批数据可以交给回调函数处理
         Args:
-            sort_field: 进行排序的字段
+            sort_field: 进行排序的字段（数值型、有索引）
             pick: 查询哪些字段
             start: 排序字段的最小值
             end: 排序字段的最大值
@@ -218,12 +218,12 @@ class TableController(Handler):
         """
 
         times = 0  # 查询了多少次
-        dealer = dealer or self._print  # 具体的回调函数
+        dealer = dealer or show_datas  # 具体的回调函数
         start, end = start or self.get_min(sort_field), end or self.get_max(sort_field)  # 查询区间
 
-        fstq = True  # 第一次查询
+        first_query = True  # 第一次查询
         while True:
-            symbol, cond = '>=' if fstq else '>', '' if add_cond is None else 'and ' + add_cond
+            symbol, cond = '>=' if first_query else '>', '' if add_cond is None else 'and ' + add_cond
             sql = '''
                 select {} from {}
                 where {} {} {} and {} <= {} {}
@@ -263,7 +263,7 @@ class TableController(Handler):
             if max_query_times and times >= max_query_times:  # 达到最大查询次数了
                 break
 
-            fstq = False
+            first_query = False
             time.sleep(rest)  # 每一轮查询之间的间隔
 
     def insert_data(self, data: dict | list | tuple, update: str = None, unique_index: str = None) -> int:
@@ -287,18 +287,18 @@ class TableController(Handler):
         new = list(set(values) - set(old))
         return new, old
 
-    def dedup_insert_data(self, items: list, dedup_by_field: str) -> int:
+    def dedup_insert_data(self, items: list, dedup_field: str) -> int:
         """
         批量插入数据\n
         如果数据跟数据库中重复，则自动过滤掉
         Args:
             items: 这些数据
-            dedup_by_field: 指定检查每条数据中的哪一个字段
+            dedup_field: 需要去重的字段
 
         Returns:
             受影响的行数
         """
-        values = [v[dedup_by_field] for v in items]
-        new, exists = self.view_field_values(dedup_by_field, values)
-        items2 = [v for v in items if v[dedup_by_field] in new]
-        return self.insert_data(items2, unique_index=dedup_by_field) if items2 else 0
+        values = [v[dedup_field] for v in items]
+        new, exists = self.view_field_values(dedup_field, values)
+        items2 = [v for v in items if v[dedup_field] in new]
+        return self.insert_data(items2, unique_index=dedup_field) if items2 else 0
