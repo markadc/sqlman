@@ -5,34 +5,7 @@ import time
 from loguru import logger
 
 from sqlman.handler import Handler
-
-
-def make_update(data: dict) -> str:
-    """set部分"""
-    return ', '.join(["`{}`='{}'".format(k, v) for k, v in data.items()])
-
-
-def add_quotation(some: list) -> str:
-    """['a', 'b', 'c']  ==>  'a','b','c'"""
-    res = ', '.join(["'{}'".format(v) for v in some])
-    return res
-
-
-def make_condition(data: dict) -> str:
-    """where部分"""
-    where = ' and '.join(
-        [
-            f'`{k}` in ({add_quotation(v)})' if isinstance(v, list) else f"`{k}`='{v}'"
-            for k, v in data.items()
-        ]
-    )
-    return where
-
-
-def show_datas(datas: list):
-    """仅配合scan"""
-    for data in datas:
-        print(data)
+from sqlman.tools import *
 
 
 class TableController(Handler):
@@ -40,34 +13,52 @@ class TableController(Handler):
         super().__init__(cfg)
         self.table = table
 
-    def delete(self, limit: int = None, **kwargs):
-        """删除一条或多条数据"""
-        sql = 'delete from {} where {} {}'.format(
+    def get_tables(self) -> list:
+        """获取当前数据库的所有表"""
+        sql = 'show tables'
+        data = self.exe_sql(sql, mode=2)['query']
+        tables = [this['Tables_in_test'] for this in data]
+        return tables
+
+    def kill(self) -> bool:
+        """删除这张表"""
+        sql = 'DROP TABLE {}'.format(self.table)
+        return self.exe_sql(sql)['status'] == 1
+
+    def delete(self, limit: int = None, **kwargs) -> int:
+        """
+        删除一条或多条数据\n
+        如果不传入参数就进行调用，则是删除表中的所有数据
+        """
+        sql = 'delete from {} {} {}'.format(
             self.table,
-            make_condition(kwargs),
+            'where {}'.format(make_condition(kwargs)) if kwargs else '',
             '' if limit is None else 'limit {}'.format(limit)
         )
-        return self.exe_sql(sql)
+        affect = self.exe_sql(sql)['affect']
+        return affect
 
-    def update(self, new: dict, limit: int = None, **kwargs):
+    def update(self, new: dict, limit: int = None, **kwargs) -> int:
         """更新数据"""
-        sql = 'update {} set {} where {} {}'.format(
+        sql = 'update {} set {} {} {}'.format(
             self.table,
             make_update(new),
-            make_condition(kwargs),
+            'where {}'.format(make_condition(kwargs)) if kwargs else '',
             '' if limit is None else 'limit {}'.format(limit)
         )
-        return self.exe_sql(sql)
+        affect = self.exe_sql(sql)['affect']
+        return affect
 
     def query(self, pick='*', limit: int = None, **kwargs) -> list:
         """查询数据"""
-        sql = 'select {} from {} where {} {}'.format(
+        sql = 'select {} from {} {} {}'.format(
             pick,
             self.table,
-            make_condition(kwargs),
+            'where {}'.format(make_condition(kwargs)) if kwargs else '',
             '' if limit is None else 'limit {}'.format(limit)
         )
-        return self.exe_sql(sql, query_all=True)
+        data = self.exe_sql(sql, mode=2)['query']
+        return data
 
     def query_count(self, **kwargs) -> int:
         """查询数量"""
@@ -75,13 +66,13 @@ class TableController(Handler):
             self.table,
             'where {}'.format(make_condition(kwargs)) if kwargs else ''
         )
-        count = self.exe_sql(sql, query_all=False, dict_cursor=False)[0]
+        count = self.exe_sql(sql, mode=1)['query']['count(1)']
         return count
 
     def is_exists(self, **kwargs) -> bool:
         """查询数据是否存在"""
         sql = 'select 1 from {} where {} limit 1'.format(self.table, make_condition(kwargs))
-        return self.exe_sql(sql) == 1
+        return self.exe_sql(sql)['affect'] == 1
 
     def random(self, limit=1) -> dict | list:
         """随机返回一条或多条数据"""
@@ -90,27 +81,8 @@ class TableController(Handler):
             self.table,
             limit
         )
-        datas = self.exe_sql(sql, query_all=True if limit > 1 else False)
-        return datas
-
-    @staticmethod
-    def items_is_ok(items: list, must_exist: str) -> bool:
-        """
-        校验items，item结构一致且含有<must_exist>字段
-        Args:
-            items: 一些数据
-            must_exist: 必须存在的字段
-        """
-        fields = None
-        for item in items:
-            if fields is None:
-                fields = set(item)
-            else:
-                if must_exist not in fields:
-                    return False
-                if fields != set(item):
-                    return False
-        return True
+        data = self.exe_sql(sql, mode=limit)['query']
+        return data
 
     def update_one(self, item: dict, depend: str) -> int:
         """
@@ -131,7 +103,8 @@ class TableController(Handler):
         s = ', '.join(temp)
         args.append(dv)
         sql = 'update {} set {} where {}=%s'.format(self.table, s, depend)
-        return self.exe_sql(sql, args=args)
+        affect = self.exe_sql(sql, args=args)['affect']
+        return affect
 
     def update_many(self, items: list, depend: str) -> int:
         """
@@ -143,7 +116,7 @@ class TableController(Handler):
         Returns:
             受影响的行数
         """
-        assert self.items_is_ok(items, depend), '错误的items'
+        ensure_safe(items, depend)
 
         ks = list(items[0].keys())
         ks.remove(depend)
@@ -154,11 +127,12 @@ class TableController(Handler):
             vs = [one[k] for k in ks]
             vs.append(one[depend])
             args.append(vs)
-        return self.exem_sql(sql, args)
+        affect = self.exem_sql(sql, args)
+        return affect
 
     def update_some(self, items: list, depend: str) -> int:
         """批量更新，只执行了1条SQL"""
-        assert self.items_is_ok(items, depend), '错误的items'
+        ensure_safe(items, depend)
 
         keys = list(items[0].keys())
         keys.remove(depend)
@@ -181,19 +155,20 @@ class TableController(Handler):
         tail = 'where {} in ({})'.format(depend, ', '.join(values))
 
         sql = '\n'.join([head, mid, tail])
-        return self.exe_sql(sql, args=args)
+        affect = self.exe_sql(sql, args=args)['affect']
+        return affect
 
     def get_min(self, field: str):
         """获取字段的最小值"""
         sql = 'select min({}) from {}'.format(field, self.table)
-        value = self.exe_sql(sql, query_all=False, dict_cursor=False)[0]
-        return value
+        min_value = self.exe_sql(sql, mode=1, dict_cursor=False)['query'][0]
+        return min_value
 
     def get_max(self, field: str):
         """获取字段的最大值"""
         sql = 'select max({}) from {}'.format(field, self.table)
-        value = self.exe_sql(sql, query_all=False, dict_cursor=False)[0]
-        return value
+        max_value = self.exe_sql(sql, mode=1, dict_cursor=False)['query'][0]
+        return max_value
 
     def scan(
             self, sort_field='id', pick='*',
@@ -236,10 +211,7 @@ class TableController(Handler):
                 once
             )
 
-            result: list = self.exe_sql(sql, query_all=True)
-            if result is False:
-                self.panic(sql, '执行失败')
-                return
+            result: list = self.exe_sql(sql, mode=2)['query']
             if not result:
                 self.panic(sql, '查询为空')
                 return
@@ -272,18 +244,18 @@ class TableController(Handler):
             return super()._insert_one(self.table, data, update, unique_index)
         return super()._insert_many(self.table, list(data), update, unique_index)
 
-    def view_field_values(self, field: str, values: list) -> tuple:
+    def check_values(self, field: str, values: list) -> tuple:
         """
-        查看字段的一些值
+        检查字段的多个值
         Args:
             field: 字段
-            values: 一些值
+            values: 多个值
 
         Returns:
             (不存在的一些值，已存在的一些值)
         """
-        datas = self.query(pick=field, **{field: values})
-        old = [data[field] for data in datas]
+        data = self.query(pick=field, **{field: values})
+        old = [one[field] for one in data]
         new = list(set(values) - set(old))
         return new, old
 
@@ -298,7 +270,7 @@ class TableController(Handler):
         Returns:
             受影响的行数
         """
-        values = [v[dedup_field] for v in items]
-        new, exists = self.view_field_values(dedup_field, values)
-        items2 = [v for v in items if v[dedup_field] in new]
-        return self.insert_data(items2, unique_index=dedup_field) if items2 else 0
+        to_check = [this[dedup_field] for this in items]
+        new_values = self.check_values(dedup_field, to_check)[0]
+        new_items = [this for this in items if this[dedup_field] in new_values]
+        return self.insert_data(new_items, unique_index=dedup_field) if new_items else 0

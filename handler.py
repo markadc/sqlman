@@ -7,6 +7,8 @@ from dbutils.pooled_db import PooledDB
 from loguru import logger
 from pymysql.cursors import DictCursor
 
+from sqlman.tools import *
+
 
 class Handler:
     def __init__(self, cfg):
@@ -22,7 +24,7 @@ class Handler:
         from sqlman.table_controller import TableController
         return TableController(self.__cfg, table)
 
-    def table(self, name: str):
+    def pick_table(self, name: str):
         return self.__getitem__(name)
 
     @staticmethod
@@ -49,7 +51,7 @@ class Handler:
         if con:
             con.close()
 
-    def exe_sql(self, sql: str, args=None, query_all=None, dict_cursor=True) -> int | dict | list:
+    def exe_sql(self, sql: str, args=None, mode=0, dict_cursor=True) -> dict:
         """执行SQL"""
         cur, con = None, None
         try:
@@ -60,9 +62,10 @@ class Handler:
             self.panic(sql, e)
             if con:
                 con.rollback()
-            return False
+            return build_result(status=0)
         else:
-            return line if query_all is None else cur.fetchall() if query_all else cur.fetchone()
+            data = None if not mode else list(cur.fetchall()) if mode > 1 else cur.fetchone()
+            return build_result(status=1, affect=line, query=data)
         finally:
             self.close_connect(cur, con)
 
@@ -77,7 +80,7 @@ class Handler:
             self.panic(sql, e)
             if con:
                 con.rollback()
-            return False
+            return 0
         else:
             return line
         finally:
@@ -85,7 +88,7 @@ class Handler:
 
     def _insert_one(self, table: str, item: dict, update: str = None, unique_index: str = None) -> int:
         """
-        添加数据
+        插入数据
         Args:
             table: 表
             item: 数据
@@ -101,12 +104,12 @@ class Handler:
             update or '{}={}'.format(unique_index, unique_index)
         )
         sql = 'insert into {}({}) value({}) {}'.format(table, fields, values, new)
-        line = self.exe_sql(sql, args=tuple(item.values()))
-        return line
+        res = self.exe_sql(sql, args=tuple(item.values()))['affect']
+        return res
 
     def _insert_many(self, table: str, items: list, update: str = None, unique_index: str = None) -> int:
         """
-        批量添加数据
+        批量插入数据
         Args:
             table: 表
             items: 数据
@@ -153,7 +156,7 @@ class Handler:
                 ) 
                 ENGINE=InnoDB    DEFAULT CHARSET=utf8mb4;
             '''.format(table)
-            return not self.exe_sql(sql) is False
+            return self.exe_sql(sql)['status']
 
         def make_item():
             """制造一条数据"""

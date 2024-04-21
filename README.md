@@ -45,7 +45,7 @@ mysql_cfg = {
 handler = Handler(mysql_cfg)
 
 # 表格对象
-people = handler.table('people')   
+people = handler['people']  
 ```
 
 ### 准备测试数据
