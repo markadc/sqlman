@@ -238,7 +238,7 @@ class TableController(Handler):
             first_query = False
             time.sleep(rest)  # 每一轮查询之间的间隔
 
-    def insert_data(self, data: dict | list | tuple, update: str = None, unique_index: str = None) -> int:
+    def insert_data(self, data: dict | list, update: str = None, unique_index: str = None) -> int:
         """批量插入数据"""
         if isinstance(data, dict):
             return super()._insert_one(self.table, data, update, unique_index)

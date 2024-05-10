@@ -58,14 +58,15 @@ class Handler:
             cur, con = self.open_connect(dict_cursor)
             line = cur.execute(sql, args=args)
             con.commit()
+            query_results = None if mode == 0 else list(cur.fetchall()) if mode > 1 else cur.fetchone()
+            return build_result(status=1, affect=line, query=query_results)
+
         except Exception as e:
             self.panic(sql, e)
             if con:
                 con.rollback()
-            return build_result(status=0)
-        else:
-            data = None if not mode else list(cur.fetchall()) if mode > 1 else cur.fetchone()
-            return build_result(status=1, affect=line, query=data)
+            return build_result(status=0, error=str(e))
+
         finally:
             self.close_connect(cur, con)
 
@@ -76,13 +77,14 @@ class Handler:
             cur, con = self.open_connect()
             line = cur.executemany(sql, args=args)
             con.commit()
+            return line
+
         except Exception as e:
             self.panic(sql, e)
             if con:
                 con.rollback()
             return 0
-        else:
-            return line
+
         finally:
             self.close_connect(cur, con)
 
@@ -104,8 +106,8 @@ class Handler:
             update or '{}={}'.format(unique_index, unique_index)
         )
         sql = 'insert into {}({}) value({}) {}'.format(table, fields, values, new)
-        res = self.exe_sql(sql, args=tuple(item.values()))['affect']
-        return res
+        affect = self.exe_sql(sql, args=tuple(item.values()))['affect']
+        return affect
 
     def _insert_many(self, table: str, items: list, update: str = None, unique_index: str = None) -> int:
         """
@@ -125,8 +127,8 @@ class Handler:
             update or '{}={}'.format(unique_index, unique_index)
         )
         sql = 'insert into {}({}) value({}) {}'.format(table, fields, values, new)
-        line = self.exem_sql(sql, args=[tuple(item.values()) for item in items])
-        return line
+        affect = self.exem_sql(sql, args=[tuple(item.values()) for item in items])
+        return affect
 
     def make_datas(self, table: str, once=1000, total=10000):
         """新增测试表并添加测试数据"""
