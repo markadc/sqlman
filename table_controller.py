@@ -239,7 +239,15 @@ class TableController(Handler):
             time.sleep(rest)  # 每一轮查询之间的间隔
 
     def insert_data(self, data: dict | list, update: str = None, unique_index: str = None) -> int:
-        """批量插入数据"""
+        """
+        插入数据，dict插入一条，list插入多条
+        Args:
+            data: {} | [{}, {}, {}]
+
+        Returns:
+            已插入的行数
+
+        """
         if isinstance(data, dict):
             return super()._insert_one(self.table, data, update, unique_index)
         return super()._insert_many(self.table, list(data), update, unique_index)
@@ -261,14 +269,13 @@ class TableController(Handler):
 
     def dedup_insert_data(self, items: list, dedup_field: str) -> int:
         """
-        批量插入数据\n
-        如果数据跟数据库中重复，则自动过滤掉
+        去重版插入数据
         Args:
-            items: 这些数据
-            dedup_field: 需要去重的字段
+            items: [{}, {}, {}]
+            dedup_field: 进行去重的字段
 
         Returns:
-            受影响的行数
+            已插入的行数
         """
         to_check = [this[dedup_field] for this in items]
         new_values = self.check_values(dedup_field, to_check)[0]
