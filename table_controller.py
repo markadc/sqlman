@@ -16,8 +16,8 @@ class TableController(Handler):
     def get_tables(self) -> list:
         """获取当前数据库的所有表"""
         sql = 'show tables'
-        data = self.exe_sql(sql, mode=2)['query']
-        tables = [this['Tables_in_test'] for this in data]
+        data = self.exe_sql(sql, dict_cursor=False, mode=2)['query']
+        tables = [this[0] for this in data]
         return tables
 
     def kill(self) -> bool:
