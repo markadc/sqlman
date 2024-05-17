@@ -88,6 +88,18 @@ class Handler:
         finally:
             self.close_connect(cur, con)
 
+    @staticmethod
+    def _getfv(data: dict | list) -> tuple:
+        item = data if isinstance(data, dict) else data[0]
+        fs = []
+        vs = []
+        for k in item.keys():
+            fs.append('`{}`'.format(k))
+            vs.append('%s')
+        fileds = ', '.join(fs)
+        values = ', '.join(vs)
+        return fileds, values
+
     def _insert_one(self, table: str, item: dict, update: str = None, unique_index: str = None) -> int:
         """
         插入数据
@@ -100,8 +112,7 @@ class Handler:
         Returns:
             受影响的行数
         """
-        fields = ', '.join(item.keys())
-        values = ', '.join(['%s'] * len(item.keys()))
+        fields, values = self._getfv(item)
         new = '' if not (update or unique_index) else 'ON DUPLICATE KEY UPDATE {}'.format(
             update or '{}={}'.format(unique_index, unique_index)
         )
@@ -121,8 +132,7 @@ class Handler:
         Returns:
             受影响的行数
         """
-        fields = ', '.join(items[0].keys())
-        values = ', '.join(['%s'] * len(items[0].keys()))
+        fields, values = self._getfv(items)
         new = '' if not (update or unique_index) else 'ON DUPLICATE KEY UPDATE {}'.format(
             update or '{}={}'.format(unique_index, unique_index)
         )
