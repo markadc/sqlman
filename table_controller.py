@@ -9,18 +9,18 @@ from sqlman.tools import *
 
 
 class TableController(Handler):
-    def __init__(self, cfg: dict, table: str):
+    def __init__(self, cfg: dict, name: str):
         super().__init__(cfg)
-        self.table = table
+        self.name = name
 
     def remove(self) -> bool:
         """删除这张表"""
-        return self.remove_table(self.table)
+        return self.remove_table(self.name)
 
     def delete(self, limit: int = None, **kwargs) -> int:
         """删除一条或多条数据，默认删除所有数据"""
         sql = 'delete from {} {} {}'.format(
-            self.table,
+            self.name,
             'where {}'.format(make_condition(kwargs)) if kwargs else '',
             '' if limit is None else 'limit {}'.format(limit)
         )
@@ -30,7 +30,7 @@ class TableController(Handler):
     def update(self, new: dict, limit: int = None, **kwargs) -> int:
         """更新数据"""
         sql = 'update {} set {} {} {}'.format(
-            self.table,
+            self.name,
             make_update(new),
             'where {}'.format(make_condition(kwargs)) if kwargs else '',
             '' if limit is None else 'limit {}'.format(limit)
@@ -42,7 +42,7 @@ class TableController(Handler):
         """查询数据"""
         sql = 'select {} from {} {} {}'.format(
             pick,
-            self.table,
+            self.name,
             'where {}'.format(make_condition(kwargs)) if kwargs else '',
             '' if limit is None else 'limit {}'.format(limit)
         )
@@ -52,7 +52,7 @@ class TableController(Handler):
     def query_count(self, **kwargs) -> int:
         """查询数量"""
         sql = 'select count(1) from {} {}'.format(
-            self.table,
+            self.name,
             'where {}'.format(make_condition(kwargs)) if kwargs else ''
         )
         count = self.exe_sql(sql, get_all=False)['data']['count(1)']
@@ -60,14 +60,14 @@ class TableController(Handler):
 
     def is_exists(self, **kwargs) -> bool:
         """查询数据是否存在"""
-        sql = 'select 1 from {} where {} limit 1'.format(self.table, make_condition(kwargs))
+        sql = 'select 1 from {} where {} limit 1'.format(self.name, make_condition(kwargs))
         return self.exe_sql(sql)['affect'] == 1
 
     def random(self, limit=1) -> dict | list:
         """随机返回一条或多条数据"""
         sql = 'select * from {} where id >= (rand() * (select max(id) from {})) limit {}'.format(
-            self.table,
-            self.table,
+            self.name,
+            self.name,
             limit
         )
         data = self.exe_sql(sql, get_all=limit)['data']
@@ -91,7 +91,7 @@ class TableController(Handler):
             args.append(v)
         s = ', '.join(temp)
         args.append(dv)
-        sql = 'update {} set {} where {}=%s'.format(self.table, s, depend)
+        sql = 'update {} set {} where {}=%s'.format(self.name, s, depend)
         affect = self.exe_sql(sql, args=args)['affect']
         return affect
 
@@ -110,7 +110,7 @@ class TableController(Handler):
         ks = list(items[0].keys())
         ks.remove(depend)
         mid = ', '.join(['{}=%s'.format(k) for k in ks])
-        sql = 'update {} set {} where {}=%s'.format(self.table, mid, depend)
+        sql = 'update {} set {} where {}=%s'.format(self.name, mid, depend)
         args = []
         for one in items:
             vs = [one[k] for k in ks]
@@ -126,7 +126,7 @@ class TableController(Handler):
         keys = list(items[0].keys())
         keys.remove(depend)
 
-        head = 'update {} set'.format(self.table)
+        head = 'update {} set'.format(self.name)
 
         mid = ''
         args = []
@@ -149,13 +149,13 @@ class TableController(Handler):
 
     def get_min(self, field: str):
         """获取字段的最小值"""
-        sql = 'select min({}) from {}'.format(field, self.table)
+        sql = 'select min({}) from {}'.format(field, self.name)
         min_value = self.exe_sql(sql, get_all=False, dict_cursor=False)['data'][0]
         return min_value
 
     def get_max(self, field: str):
         """获取字段的最大值"""
-        sql = 'select max({}) from {}'.format(field, self.table)
+        sql = 'select max({}) from {}'.format(field, self.name)
         max_value = self.exe_sql(sql, get_all=False, dict_cursor=False)['data'][0]
         return max_value
 
@@ -194,7 +194,7 @@ class TableController(Handler):
                 order by {}
                 limit {}
             '''.format(
-                pick, self.table,
+                pick, self.name,
                 sort_field, symbol, start, sort_field, end, cond,
                 sort_field,
                 once
@@ -240,8 +240,8 @@ class TableController(Handler):
 
         """
         if isinstance(data, dict):
-            return super()._insert_one(self.table, data, update, unique_index)
-        return super()._insert_many(self.table, list(data), update, unique_index)
+            return super()._insert_one(self.name, data, update, unique_index)
+        return super()._insert_many(self.name, list(data), update, unique_index)
 
     def check_values(self, field: str, values: list) -> tuple:
         """
