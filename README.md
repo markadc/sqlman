@@ -50,8 +50,8 @@ mysql_cfg = {
 # 数据库对象
 handler = Handler(mysql_cfg)
 
-# 表格对象
-people = handler['people']  
+# 表格对象（注意：表不存在则引发异常）
+student = handler.pick_table('student') 
 ```
 
 ### 准备测试数据
