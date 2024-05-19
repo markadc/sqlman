@@ -56,17 +56,18 @@ def show_datas(datas: list):
         print(data)
 
 
-def ensure_safe(items: list, must_exist: str):
+def ensure_item(items: list, must_exist: str):
     """
-    校验items，item结构一致且含有<must_exist>字段
+    校验item
     Args:
-        items: 一些数据
+        items: [{}, {}, {}]
         must_exist: 必须存在的字段
     """
     fields = None
     for item in items:
+        assert item
         if fields is None:
             fields = set(item)
-        else:
-            assert must_exist in fields, f'缺失字段{must_exist}'
-            assert fields == set(item), '结构不一致'
+            continue
+        assert must_exist in fields
+        assert fields == set(item)

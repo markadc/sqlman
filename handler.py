@@ -11,7 +11,7 @@ from sqlman.tools import *
 
 
 class Handler:
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict):
         cfg.setdefault('host', 'localhost')
         cfg.setdefault('port', 3306)
         cfg.setdefault('charset', 'utf8mb4')
@@ -20,11 +20,13 @@ class Handler:
         self._cfg = cfg
         self._pool = PooledDB(pymysql, **self._cfg)
 
-    def __getitem__(self, table: str):
+    def __getitem__(self, name: str):
+        assert name in self.get_tables(), f"table <{name}> is not exists"
         from sqlman.table_controller import TableController
-        return TableController(self._cfg, table)
+        return TableController(self._cfg, name)
 
     def pick_table(self, name: str):
+        """选择表"""
         return self.__getitem__(name)
 
     @staticmethod
@@ -121,6 +123,18 @@ class Handler:
         affect = self.exem_sql(sql, args=[tuple(item.values()) for item in items])
         return affect
 
+    def get_tables(self) -> list:
+        """获取当前数据库的所有表名称"""
+        sql = 'show tables'
+        data = self.exe_sql(sql, dict_cursor=False, get_all=True)['data']
+        tables = [v[0] for v in data]
+        return tables
+
+    def remove_table(self, name: str) -> bool:
+        """删除表"""
+        sql = 'DROP TABLE {}'.format(name)
+        return self.exe_sql(sql)['status'] == 1
+
     def make_datas(self, table: str, once=1000, total=10000):
         """新增测试表并添加测试数据"""
         import random
@@ -173,7 +187,7 @@ class Handler:
             line = self._insert_many(target, items, unique_index='id')
             nonlocal n
             n += line
-            logger.success('MySQL  插入{}  累计{}'.format(line, n))
+            logger.success('MySQL，插入{}，累计{}'.format(line, n))
 
         if not create_table():
             return
@@ -187,3 +201,5 @@ class Handler:
 
         if other := total % once:
             into_mysql(table, other)
+
+        logger.success('新表，{}/{}'.format(self._cfg['db'], table))

@@ -13,23 +13,12 @@ class TableController(Handler):
         super().__init__(cfg)
         self.table = table
 
-    def get_tables(self) -> list:
-        """获取当前数据库的所有表"""
-        sql = 'show tables'
-        data = self.exe_sql(sql, dict_cursor=False, get_all=True)['data']
-        tables = [this[0] for this in data]
-        return tables
-
-    def kill(self) -> bool:
+    def remove(self) -> bool:
         """删除这张表"""
-        sql = 'DROP TABLE {}'.format(self.table)
-        return self.exe_sql(sql)['status'] == 1
+        return self.remove_table(self.table)
 
     def delete(self, limit: int = None, **kwargs) -> int:
-        """
-        删除一条或多条数据\n
-        如果不传入参数就进行调用，则是删除表中的所有数据
-        """
+        """删除一条或多条数据，默认删除所有数据"""
         sql = 'delete from {} {} {}'.format(
             self.table,
             'where {}'.format(make_condition(kwargs)) if kwargs else '',
@@ -116,7 +105,7 @@ class TableController(Handler):
         Returns:
             受影响的行数
         """
-        ensure_safe(items, depend)
+        ensure_item(items, depend)
 
         ks = list(items[0].keys())
         ks.remove(depend)
@@ -132,7 +121,7 @@ class TableController(Handler):
 
     def update_some(self, items: list, depend: str) -> int:
         """批量更新，只执行了1条SQL"""
-        ensure_safe(items, depend)
+        ensure_item(items, depend)
 
         keys = list(items[0].keys())
         keys.remove(depend)
@@ -242,7 +231,9 @@ class TableController(Handler):
         """
         插入数据，dict插入一条，list插入多条
         Args:
-            data: {} | [{}, {}, {}]
+             data: {} | [{}, {}, {}]
+             update: 更新
+             unique_index: 唯一索引
 
         Returns:
             已插入的行数
