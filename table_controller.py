@@ -16,7 +16,7 @@ class TableController(Handler):
     def get_tables(self) -> list:
         """获取当前数据库的所有表"""
         sql = 'show tables'
-        data = self.exe_sql(sql, dict_cursor=False, mode=2)['query']
+        data = self.exe_sql(sql, dict_cursor=False, get_all=True)['data']
         tables = [this[0] for this in data]
         return tables
 
@@ -57,7 +57,7 @@ class TableController(Handler):
             'where {}'.format(make_condition(kwargs)) if kwargs else '',
             '' if limit is None else 'limit {}'.format(limit)
         )
-        data = self.exe_sql(sql, mode=2)['query']
+        data = self.exe_sql(sql, get_all=True)['data']
         return data
 
     def query_count(self, **kwargs) -> int:
@@ -66,7 +66,7 @@ class TableController(Handler):
             self.table,
             'where {}'.format(make_condition(kwargs)) if kwargs else ''
         )
-        count = self.exe_sql(sql, mode=1)['query']['count(1)']
+        count = self.exe_sql(sql, get_all=False)['data']['count(1)']
         return count
 
     def is_exists(self, **kwargs) -> bool:
@@ -81,7 +81,7 @@ class TableController(Handler):
             self.table,
             limit
         )
-        data = self.exe_sql(sql, mode=limit)['query']
+        data = self.exe_sql(sql, get_all=limit)['data']
         return data
 
     def update_one(self, item: dict, depend: str) -> int:
@@ -161,13 +161,13 @@ class TableController(Handler):
     def get_min(self, field: str):
         """获取字段的最小值"""
         sql = 'select min({}) from {}'.format(field, self.table)
-        min_value = self.exe_sql(sql, mode=1, dict_cursor=False)['query'][0]
+        min_value = self.exe_sql(sql, get_all=False, dict_cursor=False)['data'][0]
         return min_value
 
     def get_max(self, field: str):
         """获取字段的最大值"""
         sql = 'select max({}) from {}'.format(field, self.table)
-        max_value = self.exe_sql(sql, mode=1, dict_cursor=False)['query'][0]
+        max_value = self.exe_sql(sql, get_all=False, dict_cursor=False)['data'][0]
         return max_value
 
     def scan(
@@ -211,7 +211,7 @@ class TableController(Handler):
                 once
             )
 
-            result: list = self.exe_sql(sql, mode=2)['query']
+            result: list = self.exe_sql(sql, get_all=True)['data']
             if not result:
                 self.panic(sql, '查询为空')
                 return

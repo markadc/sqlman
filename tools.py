@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
 
+
+def getfv(data: dict | list) -> tuple:
+    item = data if isinstance(data, dict) else data[0]
+    fs = []
+    vs = []
+    for k in item.keys():
+        fs.append('`{}`'.format(k))
+        vs.append('%s')
+    fileds = ', '.join(fs)
+    values = ', '.join(vs)
+    return fileds, values
+
+
 def get(key: str):
     def outer(func):
         def inner(*args, **kwargs):

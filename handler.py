@@ -17,12 +17,12 @@ class Handler:
         cfg.setdefault('charset', 'utf8mb4')
         cfg.setdefault('maxconnections', 4)
         cfg.setdefault('blocking', True)
-        self.__cfg = cfg
-        self.__pool = PooledDB(pymysql, **self.__cfg)
+        self._cfg = cfg
+        self._pool = PooledDB(pymysql, **self._cfg)
 
     def __getitem__(self, table: str):
         from sqlman.table_controller import TableController
-        return TableController(self.__cfg, table)
+        return TableController(self._cfg, table)
 
     def pick_table(self, name: str):
         return self.__getitem__(name)
@@ -40,7 +40,7 @@ class Handler:
 
     def open_connect(self, dict_cursor=False):
         """打开连接"""
-        con = self.__pool.connection()
+        con = self._pool.connection()
         cur = con.cursor(DictCursor) if dict_cursor else con.cursor()
         return cur, con
 
@@ -51,22 +51,19 @@ class Handler:
         if con:
             con.close()
 
-    def exe_sql(self, sql: str, args=None, mode=0, dict_cursor=True) -> dict:
+    def exe_sql(self, sql: str, args=None, get_all=None, dict_cursor=True) -> dict:
         """执行SQL"""
         cur, con = None, None
         try:
             cur, con = self.open_connect(dict_cursor)
             line = cur.execute(sql, args=args)
             con.commit()
-            query_results = None if mode == 0 else list(cur.fetchall()) if mode > 1 else cur.fetchone()
-            return build_result(status=1, affect=line, query=query_results)
-
         except Exception as e:
             self.panic(sql, e)
-            if con:
-                con.rollback()
             return build_result(status=0, error=str(e))
-
+        else:
+            query_results = None if get_all is None else list(cur.fetchall()) if get_all else cur.fetchone()
+            return build_result(status=1, affect=line, data=query_results)
         finally:
             self.close_connect(cur, con)
 
@@ -78,27 +75,11 @@ class Handler:
             line = cur.executemany(sql, args=args)
             con.commit()
             return line
-
         except Exception as e:
             self.panic(sql, e)
-            if con:
-                con.rollback()
             return 0
-
         finally:
             self.close_connect(cur, con)
-
-    @staticmethod
-    def _getfv(data: dict | list) -> tuple:
-        item = data if isinstance(data, dict) else data[0]
-        fs = []
-        vs = []
-        for k in item.keys():
-            fs.append('`{}`'.format(k))
-            vs.append('%s')
-        fileds = ', '.join(fs)
-        values = ', '.join(vs)
-        return fileds, values
 
     def _insert_one(self, table: str, item: dict, update: str = None, unique_index: str = None) -> int:
         """
@@ -112,7 +93,7 @@ class Handler:
         Returns:
             受影响的行数
         """
-        fields, values = self._getfv(item)
+        fields, values = getfv(item)
         new = '' if not (update or unique_index) else 'ON DUPLICATE KEY UPDATE {}'.format(
             update or '{}={}'.format(unique_index, unique_index)
         )
@@ -132,7 +113,7 @@ class Handler:
         Returns:
             受影响的行数
         """
-        fields, values = self._getfv(items)
+        fields, values = getfv(items)
         new = '' if not (update or unique_index) else 'ON DUPLICATE KEY UPDATE {}'.format(
             update or '{}={}'.format(unique_index, unique_index)
         )
