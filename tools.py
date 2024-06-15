@@ -23,7 +23,7 @@ def get(key: str):
     return outer
 
 
-def build_result(**kwargs) -> dict:
+def make_result(**kwargs) -> dict:
     result = dict(**kwargs)
     return result
 
@@ -50,10 +50,15 @@ def make_condition(data: dict) -> str:
     return where
 
 
+def blue_print(s):
+    """蓝色的打印"""
+    print('\033[34m{}\033[0m'.format(s))
+
+
 def show_datas(datas: list):
     """仅配合scan"""
     for data in datas:
-        print(data)
+        blue_print(data)
 
 
 def ensure_item(items: list, must_exist: str):

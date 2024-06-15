@@ -53,19 +53,21 @@ class Handler:
         if con:
             con.close()
 
-    def exe_sql(self, sql: str, args=None, get_all=None, dict_cursor=True) -> dict:
+    def exe_sql(self, sql: str, args=None, query_all=None, to_dict=True, allow_failed=True) -> dict:
         """执行SQL"""
         cur, con = None, None
         try:
-            cur, con = self.open_connect(dict_cursor)
+            cur, con = self.open_connect(to_dict)
             line = cur.execute(sql, args=args)
             con.commit()
         except Exception as e:
+            if allow_failed is False:
+                raise e
             self.panic(sql, e)
-            return build_result(status=0, error=str(e))
+            return make_result(status=0, error=str(e))
         else:
-            query_results = None if get_all is None else list(cur.fetchall()) if get_all else cur.fetchone()
-            return build_result(status=1, affect=line, data=query_results)
+            query_results = None if query_all is None else list(cur.fetchall()) if query_all else cur.fetchone()
+            return make_result(status=1, affect=line, data=query_results)
         finally:
             self.close_connect(cur, con)
 
@@ -100,7 +102,8 @@ class Handler:
             update or '{}={}'.format(unique_index, unique_index)
         )
         sql = 'insert into {}({}) value({}) {}'.format(table, fields, values, new)
-        affect = self.exe_sql(sql, args=tuple(item.values()))['affect']
+        args = tuple(item.values())
+        affect = self.exe_sql(sql, args=args)['affect']
         return affect
 
     def _insert_many(self, table: str, items: list, update: str = None, unique_index: str = None) -> int:
@@ -120,13 +123,14 @@ class Handler:
             update or '{}={}'.format(unique_index, unique_index)
         )
         sql = 'insert into {}({}) value({}) {}'.format(table, fields, values, new)
-        affect = self.exem_sql(sql, args=[tuple(item.values()) for item in items])
+        args = [tuple(item.values()) for item in items]
+        affect = self.exem_sql(sql, args=args)
         return affect
 
     def get_tables(self) -> list:
         """获取当前数据库的所有表名称"""
         sql = 'show tables'
-        data = self.exe_sql(sql, dict_cursor=False, get_all=True)['data']
+        data = self.exe_sql(sql, to_dict=False, query_all=True)['data']
         tables = [v[0] for v in data]
         return tables
 

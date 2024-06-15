@@ -46,7 +46,7 @@ class TableController(Handler):
             'where {}'.format(make_condition(kwargs)) if kwargs else '',
             '' if limit is None else 'limit {}'.format(limit)
         )
-        data = self.exe_sql(sql, get_all=True)['data']
+        data = self.exe_sql(sql, query_all=True)['data']
         return data
 
     def query_count(self, **kwargs) -> int:
@@ -55,7 +55,7 @@ class TableController(Handler):
             self.name,
             'where {}'.format(make_condition(kwargs)) if kwargs else ''
         )
-        count = self.exe_sql(sql, get_all=False)['data']['count(1)']
+        count = self.exe_sql(sql, query_all=False)['data']['count(1)']
         return count
 
     def is_exists(self, **kwargs) -> bool:
@@ -70,7 +70,7 @@ class TableController(Handler):
             self.name,
             limit
         )
-        data = self.exe_sql(sql, get_all=limit)['data']
+        data = self.exe_sql(sql, query_all=limit)['data']
         return data
 
     def update_one(self, item: dict, depend: str) -> int:
@@ -150,13 +150,13 @@ class TableController(Handler):
     def get_min(self, field: str):
         """获取字段的最小值"""
         sql = 'select min({}) from {}'.format(field, self.name)
-        min_value = self.exe_sql(sql, get_all=False, dict_cursor=False)['data'][0]
+        min_value = self.exe_sql(sql, query_all=False, to_dict=False)['data'][0]
         return min_value
 
     def get_max(self, field: str):
         """获取字段的最大值"""
         sql = 'select max({}) from {}'.format(field, self.name)
-        max_value = self.exe_sql(sql, get_all=False, dict_cursor=False)['data'][0]
+        max_value = self.exe_sql(sql, query_all=False, to_dict=False)['data'][0]
         return max_value
 
     def scan(
@@ -200,7 +200,7 @@ class TableController(Handler):
                 once
             )
 
-            result: list = self.exe_sql(sql, get_all=True)['data']
+            result: list = self.exe_sql(sql, query_all=True)['data']
             if not result:
                 self.panic(sql, '查询为空')
                 return
