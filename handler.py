@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+from urllib.parse import urlparse
 
 import pymysql
 from dbutils.pooled_db import PooledDB
@@ -11,14 +12,44 @@ from sqlman.tools import *
 
 
 class Handler:
-    def __init__(self, cfg: dict):
-        cfg.setdefault('host', 'localhost')
-        cfg.setdefault('port', 3306)
-        cfg.setdefault('charset', 'utf8mb4')
-        cfg.setdefault('maxconnections', 4)
-        cfg.setdefault('blocking', True)
+    def __init__(self, host=None, port=None, username=None, password=None, db=None, **kwargs):
+        """
+        连接MySQL
+        Args:
+            host: 地址
+            port: 端口
+            username: 用户
+            password: 密码
+            db: 数据库
+            **kwargs: 跟PooledDB参数保持一致
+        """
+        cfg = dict(
+            host=host or 'localhost',
+            port=port or 3306,
+            user=username,
+            password=password,
+            db=db,
+            mincached=1,
+            maxcached=20,
+            charset='utf8mb4',
+            maxconnections=10,
+            blocking=True
+        )
+        cfg.update(kwargs)
         self._cfg = cfg
         self._pool = PooledDB(pymysql, **self._cfg)
+
+    @classmethod
+    def from_url(cls, url: str):
+        """连接MySQL，地址格式为：mysql://username:password@host:port/db"""
+        result = urlparse(url)
+        return cls(
+            host=result.hostname,
+            port=result.port,
+            username=result.username,
+            password=result.password,
+            db=result.path.strip('/')
+        )
 
     def __getitem__(self, name: str):
         assert name in self.get_tables(), f"table <{name}> is not exists"

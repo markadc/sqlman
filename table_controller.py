@@ -10,7 +10,7 @@ from sqlman.tools import *
 
 class TableController(Handler):
     def __init__(self, cfg: dict, name: str):
-        super().__init__(cfg)
+        super().__init__(**cfg)
         self.name = name
 
     def remove(self) -> bool:
