@@ -35,6 +35,8 @@
 
 ### 连接mysql
 
+- 数据库对象
+
 ```python
 from sqlman import Connector
 
@@ -42,20 +44,18 @@ from sqlman import Connector
 db = Connector(host="localhost", port=3306, username="root", password="root@0", db="test")  # 数据库对象
 
 # 方式2
-mysql_cfg = {
+MYSQL_CONF = {
     'host': 'localhost',
     'port': 3306,
     'username': 'root',
     'password': 'root@0',
     'db': 'test'
 }
-db = Connector(**mysql_cfg)  # 数据库对象
+db = Connector(**MYSQL_CONF)  # 数据库对象
 
 # 方式3
-mysql_url = "mysql://root:root@0@localhost:3306/test"
-db = Connector.from_url(mysql_url)  # 数据库对象
-
-
+MYSQL_URL = "mysql://root:root@0@localhost:3306/test"
+db = Connector.from_url(MYSQL_URL)  # 数据库对象
 
 ```
 
