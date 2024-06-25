@@ -36,29 +36,42 @@
 ### 连接mysql
 
 ```python
-from sqlman import Handler
+from sqlman import Connector
 
-# 用来连接test数据库
+# 方式1
+db = Connector(host="localhost", port=3306, username="root", password="root@0", db="test")  # 数据库对象
+
+# 方式2
 mysql_cfg = {
     'host': 'localhost',
     'port': 3306,
-    'db': 'test',
-    'user': 'admin',
-    'passwd': 'admin@1',
+    'username': 'root',
+    'password': 'root@0',
+    'db': 'test'
 }
+db = Connector(**mysql_cfg)  # 数据库对象
 
-# 数据库对象
-handler = Handler(mysql_cfg)
+# 方式3
+mysql_url = "mysql://root:root@0@localhost:3306/test"
+db = Connector.from_url(mysql_url)  # 数据库对象
 
-# 表格对象（注意：表不存在则引发异常）
-student = handler.pick_table('student') 
+
+
+```
+
+- 表格对象
+
+```python
+student = db['student']
+student = db.pick_table('student')
 ```
 
 ### 准备测试数据
 
 ```python
 # 一条龙服务，创建people表并插入测试数据，每次插入一千条，累计插入一万条
-handler.make_datas('people', once=1000, total=10000)
+db.make_datas('people', once=1000, total=10000)
+people = db['people']
 ```
 
 ### 插入数据
