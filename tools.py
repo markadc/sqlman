@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 def getfv(data: dict | list) -> tuple:
     item = data if isinstance(data, dict) else data[0]
     fs = []
