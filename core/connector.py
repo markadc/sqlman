@@ -12,7 +12,8 @@ from sqlman.tools import make_result, getfv
 class Connector:
     def __init__(self, host=None, port=None, username=None, password=None, db=None, **kwargs):
         """
-        连接MySQL数据库
+        连接MySQL
+
         Args:
             host: 地址
             port: 端口
@@ -51,7 +52,7 @@ class Connector:
 
     def __getitem__(self, name: str):
         assert name in self.get_tables(), f"table <{name}> is not exists"
-        from sqlman.core import Controller
+        from sqlman.core.controller import Controller
         return Controller(self._cfg, name)
 
     def pick_table(self, name: str):
@@ -87,7 +88,9 @@ class Connector:
         cur, con = None, None
         try:
             cur, con = self.open_connect(to_dict)
-            line = cur.execute(sql, args=args)
+            sql = re.sub("\s+", ' ', sql).strip()
+            args = args or None
+            line = cur.execute(sql.strip(), args=args)
             con.commit()
         except Exception as e:
             if allow_failed is False:
@@ -105,6 +108,8 @@ class Connector:
         cur, con = None, None
         try:
             cur, con = self.open_connect()
+            sql = re.sub("\s+", ' ', sql).strip()
+            args = args or None
             line = cur.executemany(sql, args=args)
             con.commit()
             return line
@@ -114,42 +119,44 @@ class Connector:
         finally:
             self.close_connect(cur, con)
 
-    def _insert_one(self, table: str, item: dict, update: str = None, unique_index: str = None) -> int:
+    def _add_one(self, table: str, item: dict, update: str = None, unique: str = None) -> int:
         """
-        插入数据
+        添加数据
+
         Args:
             table: 表
             item: 数据
             update: 数据重复，则更新数据
-            unique_index: 唯一索引
+            unique: 唯一索引
 
         Returns:
-            受影响的行数
+            已添加的行数
         """
         fields, values = getfv(item)
-        new = '' if not (update or unique_index) else 'ON DUPLICATE KEY UPDATE {}'.format(
-            update or '{}={}'.format(unique_index, unique_index)
+        new = '' if not (update or unique) else 'ON DUPLICATE KEY UPDATE {}'.format(
+            update or '{}={}'.format(unique, unique)
         )
         sql = 'insert into {}({}) value({}) {}'.format(table, fields, values, new)
         args = tuple(item.values())
         affect = self.exe_sql(sql, args=args)['affect']
         return affect
 
-    def _insert_many(self, table: str, items: list, update: str = None, unique_index: str = None) -> int:
+    def _add_many(self, table: str, items: list, update: str = None, unique: str = None) -> int:
         """
-        批量插入数据
+        批量添加数据
+
         Args:
             table: 表
             items: 数据
             update: 数据重复，则更新数据
-            unique_index: 唯一索引
+            unique: 唯一索引
 
         Returns:
-            受影响的行数
+            已添加的行数
         """
         fields, values = getfv(items)
-        new = '' if not (update or unique_index) else 'ON DUPLICATE KEY UPDATE {}'.format(
-            update or '{}={}'.format(unique_index, unique_index)
+        new = '' if not (update or unique) else 'ON DUPLICATE KEY UPDATE {}'.format(
+            update or '{}={}'.format(unique, unique)
         )
         sql = 'insert into {}({}) value({}) {}'.format(table, fields, values, new)
         args = [tuple(item.values()) for item in items]
@@ -168,8 +175,8 @@ class Connector:
         sql = 'DROP TABLE {}'.format(name)
         return self.exe_sql(sql)['status'] == 1
 
-    def make_datas(self, table: str, once=1000, total=10000):
-        """新增测试表并添加测试数据"""
+    def gen_test_table(self, name: str, once=1000, total=10000):
+        """生成测试表并补充数据，然后返回这个表格对象"""
         import random
         from faker import Faker
 
@@ -195,7 +202,7 @@ class Connector:
                     primary key (id)
                 ) 
                 ENGINE=InnoDB    DEFAULT CHARSET=utf8mb4;
-            '''.format(table)
+            '''.format(name)
             return self.exe_sql(sql)['status']
 
         def make_item():
@@ -217,22 +224,24 @@ class Connector:
         def into_mysql(target, count):
             """数据进入MySQL"""
             items = [make_item() for _ in range(count)]
-            line = self._insert_many(target, items, unique_index='id')
+            line = self._add_many(target, items, unique='id')
             nonlocal n
             n += line
             logger.success('MySQL，插入{}，累计{}'.format(line, n))
 
         if not create_table():
-            return
+            raise Exception("表格创建失败")
 
         if total < once:
-            into_mysql(table, total)
-            return
+            into_mysql(name, total)
+            return self.pick_table(name)
 
         for _ in range(total // once):
-            into_mysql(table, once)
+            into_mysql(name, once)
 
         if other := total % once:
-            into_mysql(table, other)
+            into_mysql(name, other)
 
-        logger.success('新表，{}/{}'.format(self._cfg['db'], table))
+        logger.success('新表，{}/{}'.format(self._cfg['db'], name))
+
+        return self.pick_table(name)

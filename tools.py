@@ -10,16 +10,6 @@ def getfv(data: dict | list) -> tuple:
     return fileds, values
 
 
-def get(key: str):
-    def outer(func):
-        def inner(*args, **kwargs):
-            return func(*args, **kwargs).get(key)
-
-        return inner
-
-    return outer
-
-
 def make_result(**kwargs) -> dict:
     result = dict(**kwargs)
     return result
@@ -30,10 +20,35 @@ def make_update(data: dict) -> str:
     return ', '.join(["`{}`='{}'".format(k, v) for k, v in data.items()])
 
 
+def make_set(data: dict):
+    """SET ..."""
+    fs = []
+    args = []
+    for k, v in data.items():
+        fs.append('`{}`=%s'.format(k))
+        args.append(v)
+    _set = ', '.join(fs)
+    return _set, args
+
+
+# data = {'name': "CLOS", "age": 22}
+# print("make_set\n{}\n{}\n".format(data, make_set(data)))
+
+
 def add_quotation(some: list) -> str:
     """['a', 'b', 'c']  ==>  'a','b','c'"""
     res = ', '.join(["'{}'".format(v) for v in some])
     return res
+
+
+def make_in(some: list):
+    """in ..."""
+    _in = "({})".format(", ".join(["%s"] * len(some)))
+    return _in, some
+
+
+# some = "mark CLOS thomas claus charo".split()
+# print("make_in\n{}\n{}\n".format(some, make_in(some)))
 
 
 def make_condition(data: dict) -> str:
@@ -47,20 +62,51 @@ def make_condition(data: dict) -> str:
     return where
 
 
-def blue_print(s):
-    """蓝色的打印"""
-    print('\033[34m{}\033[0m'.format(s))
+def make_where(data: dict):
+    """WHERE ..."""
+    if not data:
+        return '', []
+    conds = []
+    args = []
+    for k, v in data.items():
+        if isinstance(v, list):
+            _in, args1 = make_in(v)
+            part = "`{}` in {}".format(k, _in)
+            args += args1
+        else:
+            part = "`{}`=%s".format(k)
+            args.append(v)
+        conds.append(part)
+    _where = " and ".join(conds)
+    return _where, args
 
 
-def show_datas(datas: list):
+# data = dict(name="CLOS", age=[18, 22, 35, 60], vip=1)
+# print("make_where\n{}\n{}\n".format(data, make_where(data)))
+
+def make_tail(_where: str, _limit: int = None):
+    where = "where {}".format(_where) if _where else ''
+    limit = "limit {}".format(_limit) if _limit else ''
+    tail = "{} {}".format(where, limit).strip()
+    return tail
+
+
+def red_print(s):
+    """红色的打印"""
+    print('\033[31m{}\033[0m'.format(s))
+
+
+def print_lines(lines: list):
     """仅配合scan"""
-    for data in datas:
-        blue_print(data)
+    for line in lines:
+        red_print(line)
 
 
-def ensure_item(items: list, must_exist: str):
+def check_items(items: list, must_exist: str):
     """
-    校验item
+    校验items\n
+    如果item结构不一致，则抛出异常
+
     Args:
         items: [{}, {}, {}]
         must_exist: 必须存在的字段

@@ -2,8 +2,8 @@ import time
 
 from loguru import logger
 
-from sqlman.core import Connector
-from sqlman.tools import *
+from sqlman.core.connector import Connector
+from sqlman.tools import make_set, make_where, make_tail, check_items, print_lines
 
 
 class Controller(Connector):
@@ -16,50 +16,80 @@ class Controller(Connector):
         return self.remove_table(self.name)
 
     def delete(self, limit: int = None, **kwargs) -> int:
-        """删除一条或多条数据，默认删除所有数据"""
-        sql = 'delete from {} {} {}'.format(
-            self.name,
-            'where {}'.format(make_condition(kwargs)) if kwargs else '',
-            '' if limit is None else 'limit {}'.format(limit)
-        )
-        affect = self.exe_sql(sql)['affect']
+        """
+        删除数据（默认删除所有数据）\n
+        注意：请限定条件进行删除
+        """
+        _sql = "delete from {} {}"
+        _where, _args = make_where(kwargs)
+        tail = make_tail(_where, limit)
+        sql = _sql.format(self.name, tail)
+        affect = self.exe_sql(sql, args=_args)["affect"]
         return affect
+        # sql = 'delete from {} {} {}'.format(
+        #     self.name,
+        #     'where {}'.format(make_condition(kwargs)) if kwargs else '',
+        #     '' if limit is None else 'limit {}'.format(limit)
+        # )
+        # affect = self.exe_sql(sql)['affect']
+        # return affect
 
     def update(self, new: dict, limit: int = None, **kwargs) -> int:
         """更新数据"""
-        sql = 'update {} set {} {} {}'.format(
-            self.name,
-            make_update(new),
-            'where {}'.format(make_condition(kwargs)) if kwargs else '',
-            '' if limit is None else 'limit {}'.format(limit)
-        )
-        affect = self.exe_sql(sql)['affect']
+        _sql = "update {} set {} {}"
+        _set, args1 = make_set(new)
+        _where, args2 = make_where(kwargs)
+        tail = make_tail(_where, limit)
+        args = args1 + args2
+        sql = _sql.format(self.name, _set, tail)
+        affect = self.exe_sql(sql, args=args)["affect"]
         return affect
+        # sql = 'update {} set {} {} {}'.format(
+        #     self.name,
+        #     make_update(new),
+        #     'where {}'.format(make_condition(kwargs)) if kwargs else '',
+        #     '' if limit is None else 'limit {}'.format(limit)
+        # )
+        # affect = self.exe_sql(sql)['affect']
+        # return affect
 
     def query(self, pick='*', limit: int = None, **kwargs) -> list:
         """查询数据"""
-        sql = 'select {} from {} {} {}'.format(
-            pick,
-            self.name,
-            'where {}'.format(make_condition(kwargs)) if kwargs else '',
-            '' if limit is None else 'limit {}'.format(limit)
-        )
-        data = self.exe_sql(sql, query_all=True)['data']
+        _sql = "select {} from {} {}"
+        _where, args = make_where(kwargs)
+        tail = make_tail(_where, limit)
+        sql = _sql.format(pick, self.name, tail)
+        data = self.exe_sql(sql, args=args, query_all=True)["data"]
         return data
+        # sql = 'select {} from {} {} {}'.format(
+        #     pick,
+        #     self.name,
+        #     'where {}'.format(make_condition(kwargs)) if kwargs else '',
+        #     '' if limit is None else 'limit {}'.format(limit)
+        # )
+        # data = self.exe_sql(sql, query_all=True)['data']
+        # return data
 
     def query_count(self, **kwargs) -> int:
         """查询数量"""
-        sql = 'select count(1) from {} {}'.format(
-            self.name,
-            'where {}'.format(make_condition(kwargs)) if kwargs else ''
-        )
-        count = self.exe_sql(sql, query_all=False)['data']['count(1)']
+        _sql = "select count(1) from {} {}"
+        _where, args = make_where(kwargs)
+        tail = make_tail(_where)
+        sql = _sql.format(self.name, tail)
+        count = self.exe_sql(sql, args=args, query_all=False)["data"]["count(1)"]
         return count
+        # sql = 'select count(1) from {} {}'.format(
+        #     self.name,
+        #     'where {}'.format(make_condition(kwargs)) if kwargs else ''
+        # )
+        # count = self.exe_sql(sql, query_all=False)['data']['count(1)']
+        # return count
 
-    def is_exists(self, **kwargs) -> bool:
-        """查询数据是否存在"""
-        sql = 'select 1 from {} where {} limit 1'.format(self.name, make_condition(kwargs))
-        return self.exe_sql(sql)['affect'] == 1
+    def exists(self, **kwargs) -> bool:
+        """检查数据是否存在"""
+        _where, args = make_where(kwargs)
+        sql = 'select 1 from {} where {} limit 1'.format(self.name, _where)
+        return self.exe_sql(sql, args=args)['affect'] == 1
 
     def random(self, limit=1) -> dict | list:
         """随机返回一条或多条数据"""
@@ -73,13 +103,14 @@ class Controller(Connector):
 
     def update_one(self, item: dict, depend: str) -> int:
         """
-        更新数据
+        更新
+
         Args:
             item: 数据，且含有<depend>字段
             depend: 条件判断的字段
 
         Returns:
-            受影响的行数
+            已更新的行数
         """
         dv = item.pop(depend)
         temp = []
@@ -95,15 +126,16 @@ class Controller(Connector):
 
     def update_many(self, items: list, depend: str) -> int:
         """
-        批量更新数据
+        批量更新
+
         Args:
             items: 多条数据，每条数据含有<depend>字段
             depend: 条件判断的字段
 
         Returns:
-            受影响的行数
+            已更新的行数
         """
-        ensure_item(items, depend)
+        check_items(items, depend)
 
         ks = list(items[0].keys())
         ks.remove(depend)
@@ -119,7 +151,7 @@ class Controller(Connector):
 
     def update_some(self, items: list, depend: str) -> int:
         """批量更新，只执行了1条SQL"""
-        ensure_item(items, depend)
+        check_items(items, depend)
 
         keys = list(items[0].keys())
         keys.remove(depend)
@@ -166,6 +198,7 @@ class Controller(Connector):
     ):
         """
         扫描数据，每一批数据可以交给回调函数处理
+
         Args:
             sort_field: 进行排序的字段（数值型、有索引）
             pick: 查询哪些字段
@@ -180,7 +213,7 @@ class Controller(Connector):
         """
 
         times = 0  # 查询了多少次
-        dealer = dealer or show_datas  # 具体的回调函数
+        dealer = dealer or print_lines  # 具体的回调函数
         start, end = start or self.get_min(sort_field), end or self.get_max(sort_field)  # 查询区间
 
         first_query = True  # 第一次查询
@@ -228,6 +261,7 @@ class Controller(Connector):
     def insert_data(self, data: dict | list, update: str = None, unique_index: str = None) -> int:
         """
         插入数据，dict插入一条，list插入多条
+
         Args:
              data: {} | [{}, {}, {}]
              update: 更新
@@ -235,15 +269,15 @@ class Controller(Connector):
 
         Returns:
             已插入的行数
-
         """
         if isinstance(data, dict):
-            return super()._insert_one(self.name, data, update, unique_index)
-        return super()._insert_many(self.name, list(data), update, unique_index)
+            return super()._add_one(self.name, data, update, unique_index)
+        return super()._add_many(self.name, list(data), update, unique_index)
 
-    def check_values(self, field: str, values: list) -> tuple:
+    def cvs(self, field: str, values: list) -> tuple:
         """
         检查字段的多个值
+
         Args:
             field: 字段
             values: 多个值
@@ -256,17 +290,18 @@ class Controller(Connector):
         new = list(set(values) - set(old))
         return new, old
 
-    def dedup_insert_data(self, items: list, dedup_field: str) -> int:
+    def dedup_insert_data(self, items: list, dedup: str) -> int:
         """
         去重版插入数据
+
         Args:
             items: [{}, {}, {}]
-            dedup_field: 进行去重的字段
+            dedup: 进行去重的字段
 
         Returns:
             已插入的行数
         """
-        to_check = [this[dedup_field] for this in items]
-        new_values = self.check_values(dedup_field, to_check)[0]
-        new_items = [this for this in items if this[dedup_field] in new_values]
-        return self.insert_data(new_items, unique_index=dedup_field) if new_items else 0
+        vs = [item[dedup] for item in items]
+        nv, ov = self.cvs(field=dedup, values=vs)
+        items2 = [a for a in items if a[dedup] in nv]
+        return self.insert_data(items2, unique_index=dedup) if items2 else 0
