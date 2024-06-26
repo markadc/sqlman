@@ -26,13 +26,6 @@ class Controller(Connector):
         sql = _sql.format(self.name, tail)
         affect = self.exe_sql(sql, args=_args)["affect"]
         return affect
-        # sql = 'delete from {} {} {}'.format(
-        #     self.name,
-        #     'where {}'.format(make_condition(kwargs)) if kwargs else '',
-        #     '' if limit is None else 'limit {}'.format(limit)
-        # )
-        # affect = self.exe_sql(sql)['affect']
-        # return affect
 
     def update(self, new: dict, limit: int = None, **kwargs) -> int:
         """更新数据"""
@@ -44,14 +37,6 @@ class Controller(Connector):
         sql = _sql.format(self.name, _set, tail)
         affect = self.exe_sql(sql, args=args)["affect"]
         return affect
-        # sql = 'update {} set {} {} {}'.format(
-        #     self.name,
-        #     make_update(new),
-        #     'where {}'.format(make_condition(kwargs)) if kwargs else '',
-        #     '' if limit is None else 'limit {}'.format(limit)
-        # )
-        # affect = self.exe_sql(sql)['affect']
-        # return affect
 
     def query(self, pick='*', limit: int = None, **kwargs) -> list:
         """查询数据"""
@@ -61,14 +46,6 @@ class Controller(Connector):
         sql = _sql.format(pick, self.name, tail)
         data = self.exe_sql(sql, args=args, query_all=True)["data"]
         return data
-        # sql = 'select {} from {} {} {}'.format(
-        #     pick,
-        #     self.name,
-        #     'where {}'.format(make_condition(kwargs)) if kwargs else '',
-        #     '' if limit is None else 'limit {}'.format(limit)
-        # )
-        # data = self.exe_sql(sql, query_all=True)['data']
-        # return data
 
     def query_count(self, **kwargs) -> int:
         """查询数量"""
@@ -78,12 +55,6 @@ class Controller(Connector):
         sql = _sql.format(self.name, tail)
         count = self.exe_sql(sql, args=args, query_all=False)["data"]["count(1)"]
         return count
-        # sql = 'select count(1) from {} {}'.format(
-        #     self.name,
-        #     'where {}'.format(make_condition(kwargs)) if kwargs else ''
-        # )
-        # count = self.exe_sql(sql, query_all=False)['data']['count(1)']
-        # return count
 
     def exists(self, **kwargs) -> bool:
         """检查数据是否存在"""
