@@ -56,7 +56,6 @@ db = Connector(**MYSQL_CONF)  # 数据库对象
 # 方式3
 MYSQL_URL = "mysql://root:root@0@localhost:3306/test"
 db = Connector.from_url(MYSQL_URL)  # 数据库对象
-
 ```
 
 - 表格对象
@@ -70,7 +69,7 @@ student = db.pick_table('student')
 
 ```python
 # 一条龙服务，创建people表并插入测试数据，每次插入一千条，累计插入一万条
-db.make_datas('people', once=1000, total=10000)
+db.gen_test_table('people', once=1000, total=10000)
 people = db['people']
 ```
 
