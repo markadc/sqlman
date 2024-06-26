@@ -15,11 +15,6 @@ def make_result(**kwargs) -> dict:
     return result
 
 
-def make_update(data: dict) -> str:
-    """set部分"""
-    return ', '.join(["`{}`='{}'".format(k, v) for k, v in data.items()])
-
-
 def make_set(data: dict):
     """SET ..."""
     fs = []
@@ -35,12 +30,6 @@ def make_set(data: dict):
 # print("make_set\n{}\n{}\n".format(data, make_set(data)))
 
 
-def add_quotation(some: list) -> str:
-    """['a', 'b', 'c']  ==>  'a','b','c'"""
-    res = ', '.join(["'{}'".format(v) for v in some])
-    return res
-
-
 def make_in(some: list):
     """in ..."""
     _in = "({})".format(", ".join(["%s"] * len(some)))
@@ -49,17 +38,6 @@ def make_in(some: list):
 
 # some = "mark CLOS thomas claus charo".split()
 # print("make_in\n{}\n{}\n".format(some, make_in(some)))
-
-
-def make_condition(data: dict) -> str:
-    """where部分"""
-    where = ' and '.join(
-        [
-            f'`{k}` in ({add_quotation(v)})' if isinstance(v, list) else f"`{k}`='{v}'"
-            for k, v in data.items()
-        ]
-    )
-    return where
 
 
 def make_where(data: dict):
