@@ -84,8 +84,8 @@ data = {'id': 10001, 'name': '小明', 'age': 10, 'gender': '男'}
 # 插入一条数据
 people.insert_data(data)
 
-# 当插入的数据与表中的数据存在冲突时，直接插入会报错，如果补充<unque_index>参数，则不报错
-people.insert_data(data, unique_index='id')
+# 当插入的数据与表中的数据存在冲突时，直接插入会报错，如果补充<unique>参数，则不报错
+people.insert_data(data, unique='id')
 
 ```
 

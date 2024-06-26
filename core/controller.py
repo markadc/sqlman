@@ -258,21 +258,21 @@ class Controller(Connector):
             first_query = False
             time.sleep(rest)  # 每一轮查询之间的间隔
 
-    def insert_data(self, data: dict | list, update: str = None, unique_index: str = None) -> int:
+    def insert_data(self, data: dict | list, update: str = None, unique: str = None) -> int:
         """
         插入数据，dict插入一条，list插入多条
 
         Args:
              data: {} | [{}, {}, {}]
              update: 更新
-             unique_index: 唯一索引
+             unique: 唯一索引
 
         Returns:
             已插入的行数
         """
         if isinstance(data, dict):
-            return super()._add_one(self.name, data, update, unique_index)
-        return super()._add_many(self.name, list(data), update, unique_index)
+            return super()._add_one(self.name, data, update, unique)
+        return super()._add_many(self.name, list(data), update, unique)
 
     def cvs(self, field: str, values: list) -> tuple:
         """
@@ -304,4 +304,4 @@ class Controller(Connector):
         vs = [item[dedup] for item in items]
         nv, ov = self.cvs(field=dedup, values=vs)
         items2 = [a for a in items if a[dedup] in nv]
-        return self.insert_data(items2, unique_index=dedup) if items2 else 0
+        return self.insert_data(items2, unique=dedup) if items2 else 0
