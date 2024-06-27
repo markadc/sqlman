@@ -9,7 +9,7 @@ from sqlman.tools import make_set, make_where, make_tail, check_items, print_lin
 class Controller(Connector):
     def __init__(self, cfg: dict, name: str):
         super().__init__(**cfg)
-        self.name = name
+        self.name = "`{}`".format(name)
 
     def remove(self) -> bool:
         """删除这张表"""
@@ -40,6 +40,8 @@ class Controller(Connector):
 
     def query(self, pick='*', limit: int = None, **kwargs) -> list:
         """查询数据"""
+        if pick != '*' and pick.find(',') != -1:
+            pick = ', '.join(["`{}`".format(f.strip().strip('`')) for f in pick.split(',')])
         _sql = "select {} from {} {}"
         _where, args = make_where(kwargs)
         tail = make_tail(_where, limit)
