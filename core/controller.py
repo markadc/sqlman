@@ -41,7 +41,7 @@ class Controller(Connector):
     def query(self, pick='*', limit: int = None, **kwargs) -> list:
         """查询数据"""
         if pick != '*' and pick.find(',') != -1:
-            pick = ', '.join(["`{}`".format(f.strip().strip('`')) for f in pick.split(',')])
+            pick = ', '.join(["`{}`".format(f.strip().strip('`')) for f in pick.split(',') if f.strip()])
         _sql = "select {} from {} {}"
         _where, args = make_where(kwargs)
         tail = make_tail(_where, limit)
