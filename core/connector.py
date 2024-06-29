@@ -205,9 +205,9 @@ class Connector:
             '''.format(name)
             return self.exe_sql(sql)['status']
 
-        def make_item():
+        def make_one():
             """制造一条数据"""
-            item = {
+            one = {
                 'name': faker.name(),
                 'gender': random.choice(['男', '女']),
                 'age': faker.random.randint(18, 60),
@@ -219,11 +219,11 @@ class Connector:
                 'address': faker.address(),
                 'mark': faker.random_letter()
             }
-            return item
+            return one
 
-        def into_mysql(target, count):
+        def todb(target, count):
             """数据进入MySQL"""
-            items = [make_item() for _ in range(count)]
+            items = [make_one() for _ in range(count)]
             line = self._add_many(target, items, unique='id')
             nonlocal n
             n += line
@@ -233,14 +233,14 @@ class Connector:
             raise Exception("表格创建失败")
 
         if total < once:
-            into_mysql(name, total)
+            todb(name, total)
             return self.pick_table(name)
 
         for _ in range(total // once):
-            into_mysql(name, once)
+            todb(name, once)
 
         if other := total % once:
-            into_mysql(name, other)
+            todb(name, other)
 
         logger.success('新表，{}/{}'.format(self._cfg['db'], name))
 
