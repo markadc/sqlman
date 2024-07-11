@@ -7,8 +7,9 @@ from sqlman.tools import make_set, make_where, make_tail, check_items, print_lin
 
 
 class Controller(Connector):
-    def __init__(self, cfg: dict, name: str):
-        super().__init__(**cfg)
+    def __init__(self, cfg, pool, name: str):
+        self._cfg = cfg
+        self._pool = pool
         self.name = "`{}`".format(name)
 
     def remove(self) -> bool:

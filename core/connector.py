@@ -53,7 +53,7 @@ class Connector:
     def __getitem__(self, name: str):
         assert name in self.get_tables(), f"table <{name}> is not exists"
         from sqlman.core.controller import Controller
-        return Controller(self._cfg, name)
+        return Controller(self._cfg, self._pool, name)
 
     def pick_table(self, name: str):
         """选择表"""
