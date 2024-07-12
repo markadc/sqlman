@@ -1,5 +1,6 @@
 import time
 
+from dbutils.pooled_db import PooledDB
 from loguru import logger
 
 from sqlman.core.connector import Connector
@@ -7,10 +8,12 @@ from sqlman.tools import make_set, make_where, make_tail, check_items, print_lin
 
 
 class Controller(Connector):
-    def __init__(self, cfg, pool, name: str):
-        self._cfg = cfg
-        self._pool = pool
+    """表格控制者"""
+
+    def __init__(self, name: str, pool: PooledDB, cfg: dict):
         self.name = "`{}`".format(name)
+        self._pool = pool
+        self._cfg = cfg
 
     def remove(self) -> bool:
         """删除这张表"""

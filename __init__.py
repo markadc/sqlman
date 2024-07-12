@@ -1,1 +1,1 @@
-from sqlman.core import Connector
+from sqlman.core import Connector, Controller
