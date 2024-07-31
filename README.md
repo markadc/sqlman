@@ -162,13 +162,16 @@ print(people.random(limit=5))
 ### 遍历表
 
 ```python
-def show(datas):
-    for some in enumerate(datas, start=1):
-        print('第{}条  {}'.format(*some))
 
 
 # 遍历整张表，默认每轮扫描1000条，默认只打印数据
 people.scan()
+
+
+def show(lines):
+    for some in enumerate(lines, start=1):
+        print('第{}条  {}'.format(*some))
+
 
 # 限制id范围为101~222，每轮扫描100条，每轮的回调函数为show
 people.scan('people', sort_field='id', start=101, end=222, once=100, dealer=show)
