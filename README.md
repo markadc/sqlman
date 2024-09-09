@@ -162,8 +162,6 @@ print(people.random(limit=5))
 ### 遍历表
 
 ```python
-
-
 # 遍历整张表，默认每轮扫描1000条，默认只打印数据
 people.scan()
 
