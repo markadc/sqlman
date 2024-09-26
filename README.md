@@ -172,8 +172,8 @@ def show(lines):
 
 
 # 限制id范围为101~222，每轮扫描100条，每轮的回调函数为show
-people.scan('people', sort_field='id', start=101, end=222, once=100, dealer=show)
+people.scan(sort_field='id', start=101, end=222, once=100, dealer=show)
 
 # 限制id范围的基础上，限制age=18
-people.scan('people', sort_field='id', start=101, end=222, once=100, dealer=show, add_cond='age=18')
+people.scan(sort_field='id', start=101, end=222, once=100, dealer=show, add_cond='age=18')
 ```
