@@ -48,13 +48,13 @@ MYSQL_CONF = {
     'host': 'localhost',
     'port': 3306,
     'username': 'root',
-    'password': 'root@0',
+    'password': '123456',
     'db': 'test'
 }
 db = Connector(**MYSQL_CONF)  # 数据库对象
 
 # 方式3
-MYSQL_URL = "mysql://root:root@0@localhost:3306/test"
+MYSQL_URL = "mysql://root:123456@localhost:3306/test"
 db = Connector.from_url(MYSQL_URL)  # 数据库对象
 ```
 
