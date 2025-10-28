@@ -1,0 +1,24 @@
+# 测试配置文件（包含敏感信息）
+test_config.py
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 测试生成的日志文件
+*.log
+test_output/
+
+# IDE 文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 临时文件
+*.tmp
+*.bak
+.DS_Store
+
