@@ -65,9 +65,9 @@ SQLMan 提供三种灵活的连接方式：
 **方式一：直接传参**
 
 ```python
-from sqlman import Connector
+from sqlman.core import MySQL
 
-db = Connector(
+db = MySQL(
     host="localhost",
     port=3306,
     username="root",
@@ -79,7 +79,7 @@ db = Connector(
 **方式二：字典配置**
 
 ```python
-from sqlman import Connector
+from sqlman.core import MySQL
 
 MYSQL_CONF = {
     'host': 'localhost',
@@ -88,16 +88,16 @@ MYSQL_CONF = {
     'password': 'your_password',
     'db': 'test'
 }
-db = Connector(**MYSQL_CONF)
+db = MySQL(**MYSQL_CONF)
 ```
 
 **方式三：URL 连接**
 
 ```python
-from sqlman import Connector
+from sqlman.core import MySQL
 
 MYSQL_URL = "mysql://root:your_password@localhost:3306/test"
-db = Connector.from_url(MYSQL_URL)
+db = MySQL.from_url(MYSQL_URL)
 ```
 
 ### 2. 获取表对象
